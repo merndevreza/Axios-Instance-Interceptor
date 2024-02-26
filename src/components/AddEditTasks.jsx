@@ -41,6 +41,10 @@ const AddEditTasks = ({ onAdd, editTask,onEdit }) => {
             })
           } else {
             onAdd(change);
+            setChange({
+              title: "",
+              body: "",
+            });
           }
         }}
       >

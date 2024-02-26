@@ -1,38 +1,67 @@
-import { useState } from "react";
-import data from "./data/db";
+import { useEffect, useState } from "react";
+// import data from "./data/db";
 import Tasks from "./components/Tasks";
-import AddEditTasks from "./components/AddEditTasks";
+import AddEditTasks from "./components/AddEditTasks"; 
+import axiosInstance from "./axios/axiosInstance";
 
 function App() {
-  const [tasks, setTasks] = useState(data);
+  const [tasks, setTasks] = useState([]);
   const [editTask, setEditTask] = useState(null);
+  const [error, setError] = useState(null);
 
-  const handleAddTask = (newTask) => {
-    const nexId = tasks.length ? tasks[tasks.length - 1].id + 1 : 1;
-    setTasks([
-      ...tasks,
-      {
-        ...newTask,
-        id: nexId,
-      },
-    ]);
+  const handleAddTask = async (newTask) => {
+    try {
+      const nexId = tasks.length ? Number(tasks[tasks.length - 1].id) + 1 : 1;
+      const newTaskWithId = { id: nexId.toString(), ...newTask };
+      const response = await axiosInstance.post(
+        "/tasks",
+        newTaskWithId
+      );
+      setTasks([...tasks, response.data]);
+    } catch (err) {
+      setError(err.message);
+    }
   };
-  const handleDeleteTask = (id) => {
-    const newTasks = tasks.filter((task) => task.id !== id);
-    setTasks(newTasks);
+  const handleDeleteTask = async (id) => {
+    try {
+      await axiosInstance.delete(`/tasks/${id}`);
+      const newTasks = tasks.filter((task) => task.id !== id);
+      setTasks(newTasks);
+    } catch (err) {
+      setError(err.message);
+    }
   };
-  const handleEditTask = (task) => {
-    const UpdatedTasks = tasks.map((t) => {
-      if (t.id === task.id) {
-        return task;
-      } else {
-        return t;
+  const handleEditTask = async (task) => {
+    try {
+      const response = await axiosInstance.patch(
+        `/tasks/${task.id}`,
+        task
+      );
+      const UpdatedTasks = tasks.map((t) =>
+        t.id === response.data.id ? response.data : t
+      );
+      setTasks(UpdatedTasks);
+      setEditTask(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await axiosInstance.get("/taskss");
+        if (response && response.data) {
+          setTasks(response.data);
+        }
+        // Here we don't need to explicitly throw the error, because it is an asynchronous function in try-catch block. It will automatically throw error to the catch block
+      } catch (err) {
+        setError(err.message);
       }
-    });
-    setTasks(UpdatedTasks);
-    setEditTask(null)
-  };
+    };
 
+    fetchTasks();
+  }, []);
   return (
     <div className="bg-pink-100 p-5">
       <h1 className="text-2xl  border-b-2 border-black">Axios</h1>
@@ -46,6 +75,7 @@ function App() {
         onAdd={handleAddTask}
         onEdit={handleEditTask}
       />
+      {error && <div className="bg-red-500 p-5 mt-5">{error}</div>}
     </div>
   );
 }
